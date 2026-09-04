@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WheelPilot — Wheel Strategy Guide</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand" title="WheelPilot">θ</div>
+      <button class="nav-btn active" data-view="dash" title="Dashboard">📈</button>
+      <button class="nav-btn" data-view="scan" title="Scanner">📄</button>
+      <button class="nav-btn" data-view="wheel" title="Wheel guide">🎡</button>
+      <button class="nav-btn" data-view="journal" title="Journal">🗂️</button>
+      <button class="nav-btn" data-view="watch" title="Watchlist">⭐</button>
+      <div class="spacer"></div>
+      <button class="nav-btn" data-view="settings" title="Settings">⚙️</button>
+    </aside>
+
+    <main class="main">
+      <div id="view-dash">
+        <div class="topbar">
+          <div>
+            <h1>Portfolio Growth</h1>
+            <div class="sub">Realized P&amp;L from logged wheel cycles — recommended vs what you actually filled</div>
+          </div>
+          <div class="pills">
+            <span class="pill" id="asof">Demo tape</span>
+            <span class="pill" id="bp-pill">Buying power $0</span>
+          </div>
+        </div>
+        <div class="grid grid-2">
+          <section class="card">
+            <h2>Portfolio Growth</h2>
+            <div class="hint">Realized P&amp;L over time</div>
+            <canvas id="growth" width="760" height="280"></canvas>
+          </section>
+          <section class="card">
+            <h2>Capital</h2>
+            <div class="hint">Used for CSP collateral math and annualized yield</div>
+            <div class="filter-row">
+              <label>Buying power</label>
+              <input id="buying-power" type="number" min="0" step="100" />
+              <button class="btn" id="save-bp">Save</button>
+            </div>
+            <div class="kv" style="margin-top:14px">
+              <span>Open CSP collateral</span><span id="open-coll">$0</span>
+              <span>Assigned share cost</span><span id="share-cost">$0</span>
+              <span>Cash still free</span><span id="free-cash">$0</span>
+              <span>Open contracts</span><span id="open-n">0</span>
+            </div>
+          </section>
+        </div>
+        <h2 style="margin:22px 0 12px">Trade Metrics</h2>
+        <div class="grid grid-metrics">
+          <article class="card metric">
+            <div class="ico">◎</div>
+            <div class="label">Assignment rate</div>
+            <div class="value" id="m-assign">0%</div>
+            <div class="note">CSPs assigned vs expired / closed</div>
+          </article>
+          <article class="card metric">
+            <div class="ico">↗</div>
+            <div class="label">CC call-away rate</div>
+            <div class="value" id="m-callaway">0%</div>
+            <div class="note">CCs assigned (called away)</div>
+          </article>
+          <article class="card metric">
+            <div class="ico">📅</div>
+            <div class="label">Avg DTE at entry</div>
+            <div class="value" id="m-dte">—</div>
+            <div class="note">Average days to expiration</div>
+          </article>
+          <article class="card metric">
+            <div class="ico">$</div>
+            <div class="label">Premium per day</div>
+            <div class="value" id="m-ppd">$0</div>
+            <div class="note">Daily premium collected</div>
+          </article>
+          <article class="card metric" style="grid-column:1/-1">
+            <div class="ico">📈</div>
+            <div class="label">Annualized yield</div>
+            <div class="value" id="m-ann">0%</div>
+            <div class="note">Portfolio return rate on buying power (realized premium ÷ days ÷ capital)</div>
+          </article>
+        </div>
+      </div>
+
+      <div id="view-scan" class="hidden">
+        <div class="topbar">
+          <div>
+            <h1>Scanner</h1>
+            <div class="sub">Filter the demo chain the same way you would a CSP / CC screener</div>
+          </div>
+          <div class="pills">
+            <button class="tab scan-side active" data-side="P">Puts</button>
+            <button class="tab scan-side" data-side="C">Calls</button>
+          </div>
+        </div>
+        <div class="grid grid-2">
+          <section class="card">
+            <h2>Filters</h2>
+            <div class="hint">Matches the Theta-style buckets: options, fundamentals, events</div>
+            <div class="filters" id="filter-form">
+              <div class="filter-row"><label>Ticker contains</label><input id="f-ticker" placeholder="AAPL, SPY…" /><span></span></div>
+              <div class="filter-row"><label>Days to expiration</label><input id="f-dte-min" type="number" placeholder="Min" value="21"><input id="f-dte-max" type="number" placeholder="Max" value="45"></div>
+              <div class="filter-row"><label>Delta</label><input id="f-delta-min" type="number" step="0.01" placeholder="Min" value="0.15"><input id="f-delta-max" type="number" step="0.01" placeholder="Max" value="0.35"></div>
+              <div class="filter-row"><label>Annual yield %</label><input id="f-ann-min" type="number" placeholder="Min" value="12"><input id="f-ann-max" type="number" placeholder="Max"></div>
+              <div class="filter-row"><label>ROC %</label><input id="f-roc-min" type="number" placeholder="Min"><input id="f-roc-max" type="number" placeholder="Max"></div>
+              <div class="filter-row"><label>IV % (stock)</label><input id="f-iv-min" type="number" placeholder="Min"><input id="f-iv-max" type="number" placeholder="Max"></div>
+              <div class="filter-row"><label>Max bid/ask spread %</label><input id="f-spread" type="number" placeholder="Max %"><span></span></div>
+              <div class="filter-row"><label>Option volume</label><input id="f-vol-min" type="number" placeholder="Min" value="100"><input id="f-vol-max" type="number" placeholder="Max"></div>
+              <div class="filter-row"><label>Open interest</label><input id="f-oi-min" type="number" placeholder="Min" value="200"><input id="f-oi-max" type="number" placeholder="Max"></div>
+              <div class="filter-row"><label>% OTM</label><input id="f-otm-min" type="number" placeholder="Min"><input id="f-otm-max" type="number" placeholder="Max"></div>
+              <div class="filter-row"><label>Days to earnings</label><input id="f-earn-min" type="number" placeholder="Min" value="14"><input id="f-earn-max" type="number" placeholder="Max"></div>
+              <div class="filter-row"><label>Market cap ($B)</label><input id="f-cap-min" type="number" placeholder="Min"><input id="f-cap-max" type="number" placeholder="Max"></div>
+              <div class="filter-row"><label>P/E</label><input id="f-pe-min" type="number" placeholder="Min"><input id="f-pe-max" type="number" placeholder="Max"></div>
+              <div class="filter-row"><label>Beta</label><input id="f-beta-min" type="number" step="0.1" placeholder="Min"><input id="f-beta-max" type="number" step="0.1" placeholder="Max"></div>
+              <div class="filter-row"><label>Short float %</label><input id="f-short-min" type="number" placeholder="Min"><input id="f-short-max" type="number" placeholder="Max"></div>
+              <div class="filter-row"><label>Pilot rating 0–100</label><input id="f-rate-min" type="number" placeholder="Min"><input id="f-rate-max" type="number" placeholder="Max"></div>
+              <div class="toggle-row"><span>Hide ETFs</span><label class="switch"><input type="checkbox" id="f-hide-etf"><span class="slider"></span></label></div>
+              <div class="toggle-row"><span>Cleanup illiquid</span><label class="switch"><input type="checkbox" id="f-illiquid" checked><span class="slider"></span></label></div>
+              <div class="toggle-row"><span>Watchlist only</span><label class="switch"><input type="checkbox" id="f-watch-only"><span class="slider"></span></label></div>
+              <div class="btn-row">
+                <button class="btn" id="run-scan">Run scan</button>
+                <button class="btn ghost" id="reset-scan">Reset</button>
+              </div>
+            </div>
+          </section>
+          <section class="card">
+            <h2>Results <span id="scan-count" class="sub"></span></h2>
+            <div class="hint">Tap a row to send it into the Wheel guide as the recommended contract</div>
+            <div style="overflow:auto; max-height:720px">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Ticker</th><th>Strike</th><th>Exp</th><th>Δ</th><th>Bid</th><th>Ann</th><th>Score</th>
+                  </tr>
+                </thead>
+                <tbody id="scan-body"></tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <div id="view-wheel" class="hidden">
+        <div class="topbar">
+          <div>
+            <h1>Wheel guide</h1>
+            <div class="sub">One option at a time. Finish the tab you are on before moving forward.</div>
+          </div>
+        </div>
+        <div class="tabs" id="wheel-tabs">
+          <button class="tab active" data-step="1"><span class="n">1</span>Find Put</button>
+          <button class="tab" data-step="2"><span class="n">2</span>Log Put</button>
+          <button class="tab" data-step="3"><span class="n">3</span>Put Live</button>
+          <button class="tab" data-step="4"><span class="n">4</span>Find Call</button>
+          <button class="tab" data-step="5"><span class="n">5</span>Log Call</button>
+          <button class="tab" data-step="6"><span class="n">6</span>Call Live</button>
+        </div>
+        <div class="wizard-status" id="wheel-status"></div>
+        <div id="step-1" class="card">
+          <h2>Step 1 — Recommended cash-secured put</h2>
+          <div class="hint">Pick a stock you would be willing to own. The table is the current put scan, sorted by score.</div>
+          <div class="filter-row">
+            <label>Jump to ticker</label>
+            <input id="pick-ticker" placeholder="NVDA" />
+            <button class="btn ghost" id="focus-ticker">Focus</button>
+          </div>
+          <div style="overflow:auto; margin-top:12px">
+            <table>
+              <thead><tr><th></th><th>Ticker</th><th>Spot</th><th>Strike</th><th>DTE</th><th>Δ</th><th>Bid</th><th>Ann %</th><th>Collat.</th></tr></thead>
+              <tbody id="csp-picks"></tbody>
+            </table>
+          </div>
+        </div>
+        <div id="step-2" class="card hidden">
+          <h2>Step 2 — What did you actually sell?</h2>
+          <div class="hint">E\*TRADE fill versus the recommended contract. Collateral uses the actual strike.</div>
+          <div class="compare" id="put-compare"></div>
+          <form id="put-actual" class="filters" style="margin-top:16px">
+            <div class="filter-row"><label>Ticker</label><input name="ticker" required /><span></span></div>
+            <div class="filter-row"><label>Strike</label><input name="strike" type="number" step="0.01" required /><span></span></div>
+            <div class="filter-row"><label>Expiration</label><input name="exp" type="date" required /><span></span></div>
+            <div class="filter-row"><label>Premium received ($/sh)</label><input name="premium" type="number" step="0.01" required /><span></span></div>
+            <div class="filter-row"><label>Delta (optional)</label><input name="delta" type="number" step="0.01" /><span></span></div>
+            <div class="filter-row"><label>Contracts</label><input name="qty" type="number" min="1" value="1" /><span></span></div>
+            <div class="filter-row"><label>Fill date</label><input name="filled" type="date" /><span></span></div>
+            <div class="filter-row"><label>Notes</label><input name="notes" placeholder="Limit fill, rolled from…" /><span></span></div>
+            <div class="btn-row">
+              <button class="btn" type="submit">Save actual put</button>
+              <button class="btn ghost" type="button" id="copy-rec-put">Copy recommended into form</button>
+            </div>
+          </form>
+        </div>
+        <div id="step-3" class="card hidden">
+          <h2>Step 3 — Live cash-secured put</h2>
+          <div class="hint">Hold, close early (50% rule), let expire, or take assignment and move to covered calls.</div>
+          <div id="live-put"></div>
+        </div>
+        <div id="step-4" class="card hidden">
+          <h2>Step 4 — Recommended covered call</h2>
+          <div class="hint">Only available after assignment. Suggestions sit at or above cost basis when possible.</div>
+          <div id="cc-picks-wrap"></div>
+        </div>
+        <div id="step-5" class="card hidden">
+          <h2>Step 5 — What call did you actually sell?</h2>
+          <div class="compare" id="call-compare"></div>
+          <form id="call-actual" class="filters" style="margin-top:16px">
+            <div class="filter-row"><label>Ticker</label><input name="ticker" required /><span></span></div>
+            <div class="filter-row"><label>Strike</label><input name="strike" type="number" step="0.01" required /><span></span></div>
+            <div class="filter-row"><label>Expiration</label><input name="exp" type="date" required /><span></span></div>
+            <div class="filter-row"><label>Premium received ($/sh)</label><input name="premium" type="number" step="0.01" required /><span></span></div>
+            <div class="filter-row"><label>Delta (optional)</label><input name="delta" type="number" step="0.01" /><span></span></div>
+            <div class="filter-row"><label>Contracts</label><input name="qty" type="number" min="1" value="1" /><span></span></div>
+            <div class="filter-row"><label>Fill date</label><input name="filled" type="date" /><span></span></div>
+            <div class="filter-row"><label>Notes</label><input name="notes" /><span></span></div>
+            <div class="btn-row">
+              <button class="btn" type="submit">Save actual call</button>
+              <button class="btn ghost" type="button" id="copy-rec-call">Copy recommended into form</button>
+            </div>
+          </form>
+        </div>
+        <div id="step-6" class="card hidden">
+          <h2>Step 6 — Live covered call</h2>
+          <div class="hint">Expire and sell another call, close, or get called away and restart the wheel on a new put.</div>
+          <div id="live-call"></div>
+        </div>
+      </div>
+
+      <div id="view-journal" class="hidden">
+        <div class="topbar">
+          <div>
+            <h1>Journal</h1>
+            <div class="sub">Every recommended pick and every actual fill, grouped by wheel cycle</div>
+          </div>
+          <div class="btn-row">
+            <button class="btn ghost" id="export-json">Export JSON</button>
+            <button class="btn danger" id="wipe">Wipe local data</button>
+          </div>
+        </div>
+        <section class="card">
+          <div style="overflow:auto">
+            <table>
+              <thead>
+                <tr>
+                  <th>Cycle</th><th>Stage</th><th>Side</th><th>Ticker</th><th>Strike</th><th>Exp</th>
+                  <th>Rec $</th><th>Actual $</th><th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="journal-body"></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+
+      <div id="view-watch" class="hidden">
+        <div class="topbar">
+          <div>
+            <h1>Watchlist</h1>
+            <div class="sub">Limit the scanner and wheel picks to names you actually want to own</div>
+          </div>
+        </div>
+        <section class="card">
+          <div class="filter-row">
+            <label>Add ticker</label>
+            <input id="watch-input" placeholder="MSFT" />
+            <button class="btn" id="watch-add">Add</button>
+          </div>
+          <div id="watch-list" style="margin-top:16px"></div>
+        </section>
+      </div>
+
+      <div id="view-settings" class="hidden">
+        <div class="topbar">
+          <div>
+            <h1>Settings</h1>
+            <div class="sub">Local-only. Safe for GitHub Pages.</div>
+          </div>
+        </div>
+        <section class="card">
+          <div class="toggle-row"><span>Load sample history so metrics are not empty</span><button class="btn ghost" id="load-sample">Load sample</button></div>
+          <p class="hint">Demo contracts refresh from a daily seed. They are for learning the workflow, not live quotes. Log real E\*TRADE fills in the Wheel tabs.</p>
+        </section>
+      </div>
+
+      <footer class="note">
+        WheelPilot is an educational journal. Options can lose money, including the full value of assigned stock. Not investment advice. Not affiliated with ThetaScanner, E\*TRADE, or Morgan Stanley.
+      </footer>
+    </main>
+  </div>
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
