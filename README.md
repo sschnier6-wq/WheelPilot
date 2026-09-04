@@ -1,5 +1,7 @@
 # WheelPilot
 
+Version **1.1.0**
+
 A GitHub Pages–ready Wheel Strategy companion: scan cash-secured puts and covered calls, walk one contract at a time through the wheel, and log **recommended vs. actual** fills.
 
 This is an original educational tool inspired by the *kind* of workflow income traders use (scanner + journal + metrics). It is **not** affiliated with ThetaScanner or E*TRADE. Options involve risk and are not suitable for everyone.
